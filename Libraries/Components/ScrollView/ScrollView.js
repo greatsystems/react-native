@@ -33,9 +33,6 @@ const flattenStyle = require('flattenStyle');
 const invariant = require('fbjs/lib/invariant');
 const processDecelerationRate = require('processDecelerationRate');
 const requireNativeComponent = require('requireNativeComponent');
-/* $FlowFixMe(>=0.54.0 site=react_native_oss) This comment suppresses an error
- * found when Flow v0.54 was deployed. To see the error delete this comment and
- * run Flow. */
 const warning = require('fbjs/lib/warning');
 
 import type {NativeMethodsMixinType} from 'ReactNativeTypes';
@@ -275,16 +272,10 @@ const ScrollView = createReactClass({
      */
     pagingEnabled: PropTypes.bool,
     /**
-    * When true, ScrollView allows use of pinch gestures to zoom in and out.
-    * The default value is true.
-    * @platform ios
-    */
-    pinchGestureEnabled: PropTypes.bool,
-    /**
      * When false, the view cannot be scrolled via touch interaction.
      * The default value is true.
      *
-     * Note that the view can always be scrolled by calling `scrollTo`.
+     * Note that the view can be always be scrolled by calling `scrollTo`.
      */
     scrollEnabled: PropTypes.bool,
     /**
@@ -331,6 +322,7 @@ const ScrollView = createReactClass({
      * with `horizontal={true}`.
      */
     stickyHeaderIndices: PropTypes.arrayOf(PropTypes.number),
+    style: StyleSheetPropType(ViewStylePropTypes),
     /**
      * When set, causes the scroll view to stop at multiples of the value of
      * `snapToInterval`. This can be used for paginating through children
@@ -366,18 +358,7 @@ const ScrollView = createReactClass({
      * @platform ios
      */
     zoomScale: PropTypes.number,
-    /**
-     * This property specifies how the safe area insets are used to modify the
-     * content area of the scroll view. The default value of this property is
-     * "never". Available on iOS 11 and later.
-     * @platform ios
-     */
-    contentInsetAdjustmentBehavior: PropTypes.oneOf([
-      'automatic',
-      'scrollableAxes',
-      'never', // default
-      'always',
-    ]),
+
     /**
      * A RefreshControl component, used to provide pull-to-refresh
      * functionality for the ScrollView. Only works for vertical ScrollViews
@@ -444,8 +425,7 @@ const ScrollView = createReactClass({
   },
 
   componentWillMount: function() {
-    this._scrollAnimatedValue = new Animated.Value(this.props.contentOffset ? this.props.contentOffset.y : 0);
-    this._scrollAnimatedValue.setOffset(this.props.contentInset ? this.props.contentInset.top : 0);
+    this._scrollAnimatedValue = new Animated.Value(0);
     this._stickyHeaderRefs = new Map();
     this._headerLayoutYs = new Map();
   },
@@ -600,7 +580,7 @@ const ScrollView = createReactClass({
   _handleScroll: function(e: Object) {
     if (__DEV__) {
       if (this.props.onScroll && this.props.scrollEventThrottle == null && Platform.OS === 'ios') {
-        console.log( // eslint-disable-line no-console
+        console.log( // eslint-disable-line no-console-disallow
           'You specified `onScroll` on a <ScrollView> but not ' +
           '`scrollEventThrottle`. You will only receive one event. ' +
           'Using `16` you get all the events but be aware that it may ' +
@@ -645,11 +625,10 @@ const ScrollView = createReactClass({
     } else if (Platform.OS === 'android') {
       if (this.props.horizontal) {
         ScrollViewClass = AndroidHorizontalScrollView;
-        ScrollContentContainerViewClass = AndroidHorizontalScrollContentView;
       } else {
         ScrollViewClass = AndroidScrollView;
-        ScrollContentContainerViewClass = View;
       }
+      ScrollContentContainerViewClass = View;
     }
 
     invariant(
@@ -765,7 +744,6 @@ const ScrollView = createReactClass({
       onTouchEnd: this.scrollResponderHandleTouchEnd,
       onTouchMove: this.scrollResponderHandleTouchMove,
       onTouchStart: this.scrollResponderHandleTouchStart,
-      onTouchCancel: this.scrollResponderHandleTouchCancel,
       scrollEventThrottle: hasStickyHeaders ? 1 : this.props.scrollEventThrottle,
       sendMomentumEvents: (this.props.onMomentumScrollBegin || this.props.onMomentumScrollEnd) ?
         true : false,
@@ -833,7 +811,6 @@ const styles = StyleSheet.create({
 
 let nativeOnlyProps,
   AndroidScrollView,
-  AndroidHorizontalScrollContentView,
   AndroidHorizontalScrollView,
   RCTScrollView,
   RCTScrollContentView;
@@ -845,16 +822,13 @@ if (Platform.OS === 'android') {
   };
   AndroidScrollView = requireNativeComponent(
     'RCTScrollView',
-    (ScrollView: React.ComponentType<any>),
+    (ScrollView: ReactClass<any>),
     nativeOnlyProps
   );
   AndroidHorizontalScrollView = requireNativeComponent(
     'AndroidHorizontalScrollView',
-    (ScrollView: React.ComponentType<any>),
+    (ScrollView: ReactClass<any>),
     nativeOnlyProps
-  );
-  AndroidHorizontalScrollContentView = requireNativeComponent(
-    'AndroidHorizontalScrollContentView'
   );
 } else if (Platform.OS === 'ios') {
   nativeOnlyProps = {
@@ -867,9 +841,10 @@ if (Platform.OS === 'android') {
   };
   RCTScrollView = requireNativeComponent(
     'RCTScrollView',
-    (ScrollView: React.ComponentType<any>),
+    (ScrollView: ReactClass<any>),
     nativeOnlyProps,
   );
+  // $FlowFixMe (bvaughn) Update ComponentInterface in ViewPropTypes to include a string type (for Fiber host components) in a follow-up.
   RCTScrollContentView = requireNativeComponent('RCTScrollContentView', View);
 }
 
